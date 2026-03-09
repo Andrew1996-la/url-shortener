@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/Andrew1996-la/url-shortenerr/internal/storage"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -69,15 +70,23 @@ func (s *Storage) GetURL(alias string) (string, error) {
 		alias,
 	).Scan(&url)
 
-	fmt.Println(url)
-
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return "", fmt.Errorf("%s: alias not found", operation)
+			return "", storage.ErrUrlNotFound
 		}
 		return "", fmt.Errorf("%s: %w", operation, err)
 	}
 
 	return url, nil
+}
 
+func (s *Storage) DeleteURL(alias string) error {
+	operation := "storage.sqlite.DeleteURL"
+
+	_, err := s.db.Exec(`DELETE FROM urls WHERE alias = ?`, alias)
+	if err != nil {
+		return fmt.Errorf("%s: %w", operation, err)
+	}
+
+	return nil
 }
