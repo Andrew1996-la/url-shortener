@@ -5,6 +5,8 @@ import (
 	"os"
 
 	"github.com/Andrew1996-la/url-shortenerr/internal/config"
+	"github.com/Andrew1996-la/url-shortenerr/internal/lib/logger/sl"
+	"github.com/Andrew1996-la/url-shortenerr/internal/storage/sqlite"
 )
 
 const (
@@ -16,6 +18,11 @@ const (
 func main() {
 	cfg := config.MustLoad()
 	logger := setupLogger(cfg.Env)
+	storage, err := sqlite.NewStorage(cfg.StoragePath)
+	if err != nil {
+		logger.Error("failed to init storage", sl.Err(err))
+		os.Exit(1)
+	}
 
 	logger.Info("starting server", slog.String("env", cfg.Env))
 }

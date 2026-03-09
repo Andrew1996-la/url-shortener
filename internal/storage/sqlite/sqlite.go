@@ -3,6 +3,9 @@ package sqlite
 import (
 	"database/sql"
 	"fmt"
+	"net/url"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type Storage struct {
@@ -12,20 +15,48 @@ type Storage struct {
 func NewStorage(storagePath string) (*Storage, error) {
 	operation := "storage.sqlite.NewStorage"
 
-	db, err := sql.Open("sqlite", storagePath)
+	db, err := sql.Open("sqlite3", storagePath)
 
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", operation, err)
 	}
 
-	db.Prepare(`
+	_, err = db.Exec(`
 	CREATE TABLE IF NOT EXISTS urls (
 	    id INTEGER PRIMARY KEY,
-	    alias TEXT NOT NULL,
-	    url TEXT NOT NULL,
+	    alias TEXT NOT NULL UNIQUE,
+	    url TEXT NOT NULL
 	);
-	CREATE INDEX IF NOT EXISTS idx_alias ON url(alias);
+	CREATE INDEX IF NOT EXISTS idx_alias ON urls(alias);
 	`)
+
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", operation, err)
+	}
 
 	return &Storage{db: db}, nil
 }
+
+func (s *Storage) SaveURL(urlToSave, alias string) (int64, error) {
+	operation := "storage.sqlite.SaveURL"
+
+	res, err := s.db.Exec(`
+		INSERT INTO urls (alias, url)
+		VALUES (?, ?)`,
+		urlToSave, alias,
+	)
+
+	if err != nil {
+		return 0, fmt.Errorf("%s: %w", operation, err)
+	}
+
+	id, err := res.LastInsertId()
+
+	if err != nil {
+		return 0, fmt.Errorf("%s: %w", operation, err)
+	}
+
+	return id, nil
+}
+
+func (s *Storage) GetURL(alias int64) (*url.URL, error) {}
