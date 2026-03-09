@@ -2,8 +2,8 @@ package sqlite
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
-	"net/url"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -43,7 +43,7 @@ func (s *Storage) SaveURL(urlToSave, alias string) (int64, error) {
 	res, err := s.db.Exec(`
 		INSERT INTO urls (alias, url)
 		VALUES (?, ?)`,
-		urlToSave, alias,
+		alias, urlToSave,
 	)
 
 	if err != nil {
@@ -59,4 +59,25 @@ func (s *Storage) SaveURL(urlToSave, alias string) (int64, error) {
 	return id, nil
 }
 
-func (s *Storage) GetURL(alias int64) (*url.URL, error) {}
+func (s *Storage) GetURL(alias string) (string, error) {
+	operation := "storage.sqlite.GetURL"
+
+	var url string
+
+	err := s.db.QueryRow(`
+		SELECT url FROM urls WHERE alias = ?`,
+		alias,
+	).Scan(&url)
+
+	fmt.Println(url)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", fmt.Errorf("%s: alias not found", operation)
+		}
+		return "", fmt.Errorf("%s: %w", operation, err)
+	}
+
+	return url, nil
+
+}
